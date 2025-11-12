@@ -18,7 +18,7 @@ const getNotes = async (req, res) => {
       skip: (page - 1) * limit,
       take: parseInt(limit),
       orderBy: {
-        createdAt: 'desc', // Default sort
+        createdAt: 'desc',
       },
     });
     const totalNotes = await prisma.note.count({ where });
