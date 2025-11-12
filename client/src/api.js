@@ -2,11 +2,11 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: import.meta.env.PROD 
-    ? 'YOUR_RENDER_BACKEND_URL/api'  // Replace with your Render URL
+    ? 'https://quicknotes-api-u6bs.onrender.com'
     : 'http://localhost:5001/api',
 });
 
-// Interceptor to add the auth token to every request if it exists
+
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
