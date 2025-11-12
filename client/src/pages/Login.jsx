@@ -12,6 +12,8 @@ const Login = () => {
     e.preventDefault();
     try {
       const response = await api.post('/auth/login', { email, password });
+
+
       localStorage.setItem('token', response.data.token);
       toast.success('Login successful! Welcome back.');
       navigate('/dashboard');

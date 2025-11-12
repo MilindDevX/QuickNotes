@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: import.meta.env.PROD 
-    ? 'https://quicknotes-api-u6bs.onrender.com'
+    ? 'https://quicknotes-api-u6bs.onrender.com/api'
     : 'http://localhost:5001/api',
 });
 
