@@ -34,7 +34,7 @@ A modern, full-stack note-taking application built with React and Node.js. Quick
 - **Node.js** - JavaScript runtime
 - **Express.js** - Web application framework
 - **Prisma** - Modern ORM for database management
-- **PostgreSQL** - Relational database (via Supabase)
+- **PostgreSQL** - Relational database (via NeonDB)
 - **JWT** - JSON Web Tokens for authentication
 - **bcryptjs** - Password hashing
 
@@ -44,7 +44,7 @@ Before running this project, make sure you have:
 
 - **Node.js** (v18 or higher)
 - **npm** or **yarn**
-- **PostgreSQL database** (Supabase account recommended)
+- **PostgreSQL database** (NeonDB account recommended)
 
 ## 🚀 Getting Started
 
@@ -64,9 +64,8 @@ npm install
 
 Create a `.env` file in the `server` directory:
 
-```env
+```.env.example
 DATABASE_URL="postgresql://[user]:[password]@[host]:[port]/[database]?pgbouncer=true"
-DIRECT_URL="postgresql://[user]:[password]@[host]:[port]/[database]"
 JWT_SECRET="your-super-secret-jwt-key"
 PORT=5001
 FRONTEND_URL="http://localhost:5173"
@@ -167,7 +166,6 @@ Make sure to add environment variables in Vercel dashboard if needed.
 The backend is deployed on Render. Set the following environment variables:
 
 - `DATABASE_URL`
-- `DIRECT_URL`
 - `JWT_SECRET`
 - `FRONTEND_URL`
 
@@ -199,7 +197,7 @@ This project is open source and available under the [MIT License](LICENSE).
 
 - Icons by [Lucide](https://lucide.dev/)
 - UI inspiration from modern note-taking applications
-- Database hosting by [Supabase](https://supabase.com/)
+- Database hosting by [NeonDB]
 
 ## 📧 Contact
 
@@ -207,4 +205,4 @@ For any questions or feedback, please reach out through GitHub issues.
 
 ---
 
-Made with by Milind Bansal
+Made by Milind Bansal
