@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import api from '../api';
 import toast from 'react-hot-toast';
 import { Mail, Lock, ArrowLeft, User, Loader2, Check } from 'lucide-react';
+import { GoogleLogin } from '@react-oauth/google';
 
 const Signup = () => {
   const [name, setName] = useState('');
@@ -10,7 +11,50 @@ const Signup = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const navigate = useNavigate();
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setGoogleLoading(true);
+    try {
+      const response = await api.post('/auth/google', {
+        credential: credentialResponse.credential,
+      });
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+      toast.success('Account created! Welcome to QuickNotes!', {
+        duration: 3000,
+        style: {
+          background: '#18181b',
+          color: '#fff',
+          border: '1px solid rgba(255,255,255,0.1)',
+        },
+      });
+      setTimeout(() => navigate('/dashboard'), 500);
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Google sign-up failed', {
+        duration: 4000,
+        style: {
+          background: '#18181b',
+          color: '#fff',
+          border: '1px solid rgba(255,255,255,0.1)',
+        },
+      });
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
+  const handleGoogleError = () => {
+    toast.error('Google sign-up was cancelled', {
+      duration: 4000,
+      style: {
+        background: '#18181b',
+        color: '#fff',
+        border: '1px solid rgba(255,255,255,0.1)',
+      },
+    });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -223,12 +267,32 @@ const Signup = () => {
           {/* Divider */}
           <div className="my-6 flex items-center gap-4">
             <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
-            <span className="text-zinc-500 text-sm">or</span>
+            <span className="text-zinc-500 text-sm">or continue with</span>
             <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
           </div>
 
+          {/* Google Sign Up */}
+          <div className="flex justify-center">
+            {googleLoading ? (
+              <div className="flex items-center gap-2 px-4 py-3 bg-white/5 rounded-xl text-zinc-400">
+                <Loader2 size={18} className="animate-spin" />
+                <span>Signing up with Google...</span>
+              </div>
+            ) : (
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={handleGoogleError}
+                theme="filled_black"
+                shape="pill"
+                size="large"
+                text="signup_with"
+                width="300"
+              />
+            )}
+          </div>
+
           {/* Sign In Link */}
-          <p className="text-center text-zinc-400">
+          <p className="text-center text-zinc-400 mt-6">
             Already have an account?{' '}
             <Link 
               to="/login" 

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Pencil, Trash2, X, Plus, Search, FileText, Calendar, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -8,7 +8,8 @@ const NOTES_PER_PAGE = 6;
 
 const Dashboard = () => {
   const [notes, setNotes] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [notesLoading, setNotesLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewingNote, setViewingNote] = useState(null);
@@ -16,9 +17,16 @@ const Dashboard = () => {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [savingNote, setSavingNote] = useState(false);
   const [user, setUser] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState({
+    totalPages: 1,
+    totalNotes: 0,
+    hasNextPage: false,
+    hasPrevPage: false,
+  });
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -28,27 +36,50 @@ const Dashboard = () => {
     }
   }, []);
 
-  const fetchNotes = async () => {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setCurrentPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const fetchNotes = useCallback(async (isInitial = false) => {
     try {
-      const response = await api.get('/notes');
+      if (isInitial) {
+        setInitialLoading(true);
+      } else {
+        setNotesLoading(true);
+      }
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: NOTES_PER_PAGE.toString(),
+      });
+      if (debouncedSearch) {
+        params.append('search', debouncedSearch);
+      }
+      
+      const response = await api.get(`/notes?${params.toString()}`);
       setNotes(response.data.notes);
+      setPagination(response.data.pagination);
     } catch (error) {
       console.error('Failed to fetch notes', error);
       if (error.response && error.response.status === 401) {
         navigate('/login');
       }
     } finally {
-      setLoading(false);
+      setInitialLoading(false);
+      setNotesLoading(false);
     }
-  };
+  }, [currentPage, debouncedSearch, navigate]);
 
   useEffect(() => {
-    fetchNotes();
-  }, [navigate]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm]);
+    if (initialLoading) {
+      fetchNotes(true);
+    } else {
+      fetchNotes(false);
+    }
+  }, [currentPage, debouncedSearch]);
 
   const handleCreateNote = () => {
     setEditingNote(null);
@@ -85,7 +116,7 @@ const Dashboard = () => {
         toast.success('Note created', {
           style: { background: '#18181b', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' },
         });
-        setCurrentPage(1);
+        setCurrentPage(1); // Go to first page to see new note
       }
       setShowModal(false);
       fetchNotes();
@@ -106,11 +137,10 @@ const Dashboard = () => {
         toast.success('Note deleted', {
           style: { background: '#18181b', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' },
         });
-        fetchNotes();
-        const remainingNotes = filteredNotes.length - 1;
-        const maxPage = Math.ceil(remainingNotes / NOTES_PER_PAGE);
-        if (currentPage > maxPage && maxPage > 0) {
-          setCurrentPage(maxPage);
+        if (notes.length === 1 && currentPage > 1) {
+          setCurrentPage(currentPage - 1);
+        } else {
+          fetchNotes();
         }
       } catch (error) {
         toast.error('Failed to delete note', {
@@ -121,15 +151,9 @@ const Dashboard = () => {
     }
   };
 
-  const filteredNotes = notes.filter(note =>
-    note.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    note.content.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const totalPages = Math.ceil(filteredNotes.length / NOTES_PER_PAGE);
+  const { totalPages, totalNotes } = pagination;
   const startIndex = (currentPage - 1) * NOTES_PER_PAGE;
-  const endIndex = startIndex + NOTES_PER_PAGE;
-  const paginatedNotes = filteredNotes.slice(startIndex, endIndex);
+  const endIndex = Math.min(startIndex + NOTES_PER_PAGE, totalNotes);
 
   const goToPage = (page) => {
     if (page >= 1 && page <= totalPages) {
@@ -166,7 +190,21 @@ const Dashboard = () => {
     return pages;
   };
 
-  if (loading) {
+  const NoteSkeleton = () => (
+    <div className="p-5 rounded-xl bg-gradient-to-br from-zinc-900/80 to-zinc-900/50 backdrop-blur-sm border border-white/5 animate-pulse">
+      <div className="flex justify-between items-start mb-3">
+        <div className="h-6 w-3/4 bg-zinc-800 rounded"></div>
+      </div>
+      <div className="space-y-2 mb-4">
+        <div className="h-3 w-full bg-zinc-800/60 rounded"></div>
+        <div className="h-3 w-5/6 bg-zinc-800/60 rounded"></div>
+        <div className="h-3 w-4/6 bg-zinc-800/60 rounded"></div>
+      </div>
+      <div className="h-3 w-20 bg-zinc-800/40 rounded"></div>
+    </div>
+  );
+
+  if (initialLoading) {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
         <div className="text-center">
@@ -212,7 +250,7 @@ const Dashboard = () => {
               Welcome back, {user?.name || 'there'}
             </h1>
             <p className="text-zinc-400">
-              {notes.length} {notes.length === 1 ? 'note' : 'notes'} total
+              {totalNotes} {totalNotes === 1 ? 'note' : 'notes'} total
             </p>
           </div>
           <button 
@@ -240,20 +278,26 @@ const Dashboard = () => {
         </div>
 
         {/* Notes Grid */}
-        {filteredNotes.length === 0 ? (
+        {notesLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[...Array(NOTES_PER_PAGE)].map((_, i) => (
+              <NoteSkeleton key={i} />
+            ))}
+          </div>
+        ) : notes.length === 0 ? (
           <div className="bg-zinc-900/50 backdrop-blur-sm border border-white/10 rounded-2xl p-12 text-center animate-fade-in-up">
             <div className="w-16 h-16 rounded-full bg-gradient-to-br from-violet-500/20 to-violet-600/20 flex items-center justify-center mx-auto mb-6">
               <FileText size={28} className="text-violet-400" />
             </div>
             <h3 className="text-xl font-semibold mb-2">
-              {searchTerm ? 'No notes found' : 'No notes yet'}
+              {debouncedSearch ? 'No notes found' : 'No notes yet'}
             </h3>
             <p className="text-zinc-400 mb-6 max-w-sm mx-auto">
-              {searchTerm 
+              {debouncedSearch 
                 ? 'Try adjusting your search terms.' 
                 : 'Create your first note to get started.'}
             </p>
-            {!searchTerm && (
+            {!debouncedSearch && (
               <button 
                 onClick={handleCreateNote}
                 className="group relative inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl font-semibold overflow-hidden transition-all duration-300 hover:shadow-[0_0_30px_rgba(139,92,246,0.4)] hover:scale-105"
@@ -267,7 +311,7 @@ const Dashboard = () => {
         ) : (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {paginatedNotes.map((note, index) => (
+              {notes.map((note, index) => (
                 <div 
                   key={note.id} 
                   onClick={() => handleViewNote(note)}
@@ -355,7 +399,7 @@ const Dashboard = () => {
 
                 {/* Page Info */}
                 <span className="ml-4 text-sm text-zinc-500">
-                  {startIndex + 1}-{Math.min(endIndex, filteredNotes.length)} of {filteredNotes.length}
+                  {startIndex + 1}-{endIndex} of {totalNotes}
                 </span>
               </div>
             )}

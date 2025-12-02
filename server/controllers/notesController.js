@@ -1,31 +1,50 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
+const NOTES_PER_PAGE = 6;
+
 const getNotes = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { search } = req.query;
+    const { search, page = 1, limit = NOTES_PER_PAGE } = req.query;
+    
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
 
-    let notes;
-    if (search) {
-      notes = await prisma.note.findMany({
-        where: {
-          authorId: userId,
-          OR: [
-            { title: { contains: search, mode: 'insensitive' } },
-            { content: { contains: search, mode: 'insensitive' } },
-          ],
-        },
-        orderBy: { updatedAt: 'desc' },
-      });
-    } else {
-      notes = await prisma.note.findMany({
-        where: { authorId: userId },
-        orderBy: { updatedAt: 'desc' },
-      });
-    }
+    const whereClause = {
+      authorId: userId,
+      ...(search && {
+        OR: [
+          { title: { contains: search, mode: 'insensitive' } },
+          { content: { contains: search, mode: 'insensitive' } },
+        ],
+      }),
+    };
 
-    res.json({ notes });
+    const totalNotes = await prisma.note.count({
+      where: whereClause,
+    });
+
+    const notes = await prisma.note.findMany({
+      where: whereClause,
+      orderBy: { updatedAt: 'desc' },
+      skip,
+      take: limitNum,
+    });
+
+    const totalPages = Math.ceil(totalNotes / limitNum);
+
+    res.json({
+      notes,
+      pagination: {
+        currentPage: pageNum,
+        totalPages,
+        totalNotes,
+        hasNextPage: pageNum < totalPages,
+        hasPrevPage: pageNum > 1,
+      },
+    });
   } catch (error) {
     console.error('Error fetching notes:', error);
     res.status(500).json({ error: 'Failed to fetch notes' });
