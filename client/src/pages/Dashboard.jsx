@@ -116,7 +116,7 @@ const Dashboard = () => {
         toast.success('Note created', {
           style: { background: '#18181b', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' },
         });
-        setCurrentPage(1); // Go to first page to see new note
+        setCurrentPage(1);
       }
       setShowModal(false);
       fetchNotes();

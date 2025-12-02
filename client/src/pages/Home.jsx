@@ -224,12 +224,9 @@ const Home = () => {
 
         {/* Footer */}
         <footer className="py-8 px-6 border-t border-white/5">
-          <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-center items-center gap-4">
             <p className="text-zinc-500 text-sm">
               © 2025 QuickNotes. All rights reserved.
-            </p>
-            <p className="text-zinc-600 text-sm">
-              Built with ❤️ for productivity
             </p>
           </div>
         </footer>

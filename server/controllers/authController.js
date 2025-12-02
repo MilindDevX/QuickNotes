@@ -33,7 +33,6 @@ const login = async (req, res) => {
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
-    // Check if user signed up with OAuth (no password)
     if (!user.password) {
       return res.status(401).json({ error: 'Please sign in with Google' });
     }
@@ -55,7 +54,6 @@ const googleAuth = async (req, res) => {
   const { credential } = req.body;
   
   try {
-    // Verify the Google token
     const ticket = await googleClient.verifyIdToken({
       idToken: credential,
       audience: process.env.GOOGLE_CLIENT_ID,
@@ -64,23 +62,20 @@ const googleAuth = async (req, res) => {
     const payload = ticket.getPayload();
     const { sub: googleId, email, name, picture } = payload;
     
-    // Check if user exists
     let user = await prisma.user.findUnique({ where: { email } });
     
     if (user) {
-      // If user exists but signed up with email/password, link accounts
       if (!user.provider) {
         user = await prisma.user.update({
           where: { email },
           data: {
             provider: 'google',
             providerId: googleId,
-            name: user.name || name, // Keep existing name if set
+            name: user.name || name,
           },
         });
       }
     } else {
-      // Create new user
       user = await prisma.user.create({
         data: {
           email,
@@ -91,9 +86,8 @@ const googleAuth = async (req, res) => {
       });
     }
     
-    // Generate JWT token
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, {
-      expiresIn: '7d', // Longer expiry for OAuth users
+      expiresIn: '7d',
     });
     
     res.json({ 

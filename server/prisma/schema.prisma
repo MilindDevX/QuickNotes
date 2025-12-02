@@ -12,7 +12,7 @@ model User {
   name       String?
   email      String   @unique
   password   String?
-  provider   String?  // "google" or null for email/password
+  provider   String?
   providerId String?
   notes      Note[]
   createdAt  DateTime @default(now())
