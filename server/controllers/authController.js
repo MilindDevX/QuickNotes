@@ -33,15 +33,20 @@ const login = async (req, res) => {
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
+    // Check if user signed up with OAuth (no password)
+    if (!user.password) {
+      return res.status(401).json({ error: 'Please sign in with Google' });
+    }
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, {
-      expiresIn: '1h',
+      expiresIn: '7d',
     });
     res.json({ token, user: { id: user.id, name: user.name, email: user.email } });
   } catch (error) {
+    console.error('Login error:', error);
     res.status(500).json({ error: 'Something went wrong' });
   }
 };
